@@ -8,6 +8,11 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
 // Crear carpeta uploads si no existe
 const uploadDir = './uploads/productos';
 if (!fs.existsSync(uploadDir)){
