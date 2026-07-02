@@ -1020,6 +1020,7 @@ app.post('/api/ordenes_trabajo/:id/quitar-repuesto-desde-retiro', async (req, re
 });
 
 app.post('/api/ordenes_trabajo', async (req, res) => {
+	console.log('### VERSION 5 JULIO 02 - CON AT TIME ZONE ###'); 
   try {
     const ot = req.body;
     
