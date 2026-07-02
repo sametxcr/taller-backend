@@ -1028,6 +1028,8 @@ app.post('/api/ordenes_trabajo', async (req, res) => {
     delete ot.fecha_creacion;
     delete ot.fecha_inicio_taller;
     delete ot.fecha_entrega;
+
+	  console.log('OT DESPUES DELETE:', JSON.stringify(ot)); 
     
     const { rows } = await pool.query(
       `INSERT INTO ordenes_trabajo (
@@ -1050,6 +1052,7 @@ app.post('/api/ordenes_trabajo', async (req, res) => {
         JSON.stringify(ot.checklist_recepcion || []), ot.notas_internas
       ]
     );
+	  console.log('OT GUARDADA:', rows[0]);
     res.json(formatearOTParaFrontend(rows[0]));
   } catch (err) {
     console.error('ERROR POST:', err);
