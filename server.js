@@ -1029,7 +1029,7 @@ app.post('/api/ordenes_trabajo', async (req, res) => {
         estado_ot, servicios, obs_servicios, repuestos_usados, mano_obra, abono,
         monto_estimado, monto_final, dias_en_taller, tecnico_asignado,
         kilometraje, descripcion_servicio, checklist_recepcion, notas_internas
-      ) VALUES ($1,$2,NOW(),NOW(),NULL,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      ) VALUES ($1,$2,(NOW() AT TIME ZONE 'America/Santiago'),(NOW() AT TIME ZONE 'America/Santiago'),NULL,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [
         ot.rut_cliente, ot.patente,
         ot.estado_ot || 'Pendiente',
