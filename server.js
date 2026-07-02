@@ -240,7 +240,7 @@ app.post('/api/productos/:sku/foto', upload.single('foto'), async (req, res) => 
     const { sku } = req.params; // ← CAMBIO: id → sku
     if (!req.file) return res.status(400).json({ error: 'No se subió archivo' });
     
-    const fotoUrl = `/uploads/productos/${req.file.filename}`;
+    const fotoUrl = `/api/uploads/productos/${req.file.filename}`;
     
     const result = await pool.query(
       'UPDATE productos SET imagen_url = $1 WHERE sku = $2 RETURNING *', // ← CAMBIO: foto_url→imagen_url, codigo→sku
