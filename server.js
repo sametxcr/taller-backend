@@ -1078,18 +1078,13 @@ app.patch('/api/ordenes_trabajo/:id/estado', async (req, res) => {
       return res.status(400).json({ error: '⚠ Debe FINALIZAR antes de ENTREGAR' });
     }
 
-    const getRepuestos = () => {
-      const r = ot.repuestos_usados;
-      if (!r) return [];
-      if (Array.isArray(r)) return r;
-      if (typeof r === 'object') return r;
-      try { return JSON.parse(r); } catch { return []; }
-    };
-
-        // Si cambias a Entregado, fuerza fecha Chile
-    const fechaEntregaFinal = (estado === 'Entregado' && !fecha_entrega) 
-      ? obtenerFechaHoraChileISO()  // ✅ Ahora sí guarda ISO con timezone Chile
-      : fecha_entrega;
+    // ✅ FIX ZONA HORARIA CHILE
+    let fechaEntregaFinal = fecha_entrega;
+    if (estado === 'Entregado' &&!fecha_entrega) {
+      fechaEntregaFinal = new Date().toLocaleString('sv-SE', {
+        timeZone: 'America/Santiago'
+      }).replace(' ', 'T') + '.000-04:00';
+    }
 
     await client.query(
       `UPDATE ordenes_trabajo SET
@@ -1100,6 +1095,14 @@ app.patch('/api/ordenes_trabajo/:id/estado', async (req, res) => {
        WHERE id = $5`,
       [estado, fechaEntregaFinal, tecnico_asignado, dias_taller, id]
     );
+
+    const getRepuestos = () => {
+      const r = ot.repuestos_usados;
+      if (!r) return [];
+      if (Array.isArray(r)) return r;
+      if (typeof r === 'object') return r;
+      try { return JSON.parse(r); } catch { return []; }
+    };
 
     // 1⃣ FINALIZADO → VALIDA STOCK Y DESCUENTA
     if (estado === 'Finalizado' && estadosTaller.includes(estadoAnterior)) {
@@ -1148,21 +1151,17 @@ app.patch('/api/ordenes_trabajo/:id/estado', async (req, res) => {
       });
     }
 
-       // 3⃣ ENTREGADO
+    // 3⃣ ENTREGADO
     if (estado === 'Entregado') {
-      // Si no viene fecha_entrega del frontend, usa la de Chile
-      const fechaEntregaFinal = fecha_entrega || obtenerFechaHoraChileISO();
       const inicio = parsearFechaChile(ot.fecha_creacion);
       const fin = parsearFechaChile(fechaEntregaFinal);
       const diasCalculados = Math.max(1, Math.ceil((fin - inicio) / 86400000));
 
-      // Guarda la fecha de entrega en BD
-      await client.query('UPDATE ordenes_trabajo SET fecha_entrega = $1 WHERE id = $2', [fechaEntregaFinal, id]);
-      const dias = Math.max(1, Math.ceil((fin - inicio) / 86400000));
+      await client.query('UPDATE ordenes_trabajo SET dias_taller = $1 WHERE id = $2', [diasCalculados, id]);
 
       await client.query('COMMIT');
       return res.json({
-        mensaje: `🎉 AUTO ENTREGADO\n\n🚗 ${ot.marca} ${ot.modelo}\n🔖 Patente: ${ot.patente}\n⏱ ${dias} día${dias>1?'s':''} en taller\n\n✅ OT cerrada correctamente`
+        mensaje: `🎉 AUTO ENTREGADO\n\n🚗 ${ot.marca} ${ot.modelo}\n🔖 Patente: ${ot.patente}\n⏱ ${diasCalculados} día${diasCalculados>1?'s':''} en taller\n\n✅ OT cerrada correctamente`
       });
     }
 
