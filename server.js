@@ -1022,21 +1022,19 @@ app.post('/api/ordenes_trabajo/:id/quitar-repuesto-desde-retiro', async (req, re
 app.post('/api/ordenes_trabajo', async (req, res) => {
   try {
     const ot = req.body;
-    const fechaCreacion = ot.fecha_creacion || obtenerFechaHoraChileISO();
-    const fechaInicio = obtenerFechaHoraChileISO();
-
+    
     const { rows } = await pool.query(
       `INSERT INTO ordenes_trabajo (
         rut_cliente, patente, fecha_creacion, fecha_inicio_taller, fecha_entrega,
         estado_ot, servicios, obs_servicios, repuestos_usados, mano_obra, abono,
         monto_estimado, monto_final, dias_en_taller, tecnico_asignado,
         kilometraje, descripcion_servicio, checklist_recepcion, notas_internas
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`,
+      ) VALUES ($1,$2,NOW(),NOW(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
       [
-        ot.rut_cliente, ot.patente, fechaCreacion, fechaInicio, null,
+        ot.rut_cliente, ot.patente, null, // fecha_creacion = NOW(), fecha_inicio_taller = NOW(), fecha_entrega = null
         ot.estado_ot || 'Pendiente',
         JSON.stringify(ot.servicios || []),
-        JSON.stringify(ot.obs_servicios || {}), // ← AGREGADO ACÁ
+        JSON.stringify(ot.obs_servicios || {}),
         JSON.stringify(ot.repuestos_usados || []),
         JSON.stringify(ot.mano_obra || []),
         ot.abono || 0,
