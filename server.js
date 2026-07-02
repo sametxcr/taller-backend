@@ -1266,8 +1266,9 @@ app.put('/api/ordenes_trabajo/:id', async (req, res) => {
     otNueva.dias_en_taller = diasTaller;
 
     if (otNueva.estado_ot === 'Entregado' &&!otAntigua.fecha_entrega) {
-      otNueva.fecha_entrega = obtenerFechaHoraChileISO(); // YYYY-MM-DD Chile
-    }
+  const { rows: fechaRows } = await client.query(`SELECT (NOW() AT TIME ZONE 'America/Santiago') as fecha_chile`);
+  otNueva.fecha_entrega = fechaRows[0].fecha_chile;
+}
 
     const { rows } = await client.query(
       `UPDATE ordenes_trabajo SET
