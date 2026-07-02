@@ -306,7 +306,7 @@ app.delete('/api/productos/:sku/foto', async (req, res) => {
 });
 
 // Servir las imágenes estáticas - PONLO ANTES DEL app.listen
-app.use('/uploads', express.static('uploads'));
+app.use('/api/uploads', express.static('uploads'));
 
 app.put('/api/productos/:id', async (req, res) => {
   try {
