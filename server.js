@@ -1023,6 +1023,11 @@ app.post('/api/ordenes_trabajo', async (req, res) => {
   try {
     const ot = req.body;
     
+    // MATA CUALQUIER FECHA QUE VENGA DEL FRONTEND
+    delete ot.fecha_creacion;
+    delete ot.fecha_inicio_taller;
+    delete ot.fecha_entrega;
+    
     const { rows } = await pool.query(
       `INSERT INTO ordenes_trabajo (
         rut_cliente, patente, fecha_creacion, fecha_inicio_taller, fecha_entrega,
