@@ -1029,9 +1029,9 @@ app.post('/api/ordenes_trabajo', async (req, res) => {
         estado_ot, servicios, obs_servicios, repuestos_usados, mano_obra, abono,
         monto_estimado, monto_final, dias_en_taller, tecnico_asignado,
         kilometraje, descripcion_servicio, checklist_recepcion, notas_internas
-      ) VALUES ($1,$2,NOW(),NOW(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+      ) VALUES ($1,$2,NOW(),NOW(),NULL,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
       [
-        ot.rut_cliente, ot.patente, null, // fecha_creacion = NOW(), fecha_inicio_taller = NOW(), fecha_entrega = null
+        ot.rut_cliente, ot.patente,
         ot.estado_ot || 'Pendiente',
         JSON.stringify(ot.servicios || []),
         JSON.stringify(ot.obs_servicios || {}),
