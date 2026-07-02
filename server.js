@@ -1085,15 +1085,27 @@ if (estado === 'Entregado' &&!fecha_entrega) {
   usarFechaDB = true;
 }
 
-    await client.query(
-      `UPDATE ordenes_trabajo SET
-        estado_ot = $1,
-        fecha_entrega = $2,
-        tecnico_asignado = COALESCE($3, tecnico_asignado),
-        dias_taller = COALESCE($4, dias_taller)
-       WHERE id = $5`,
-      [estado, fechaEntregaFinal, tecnico_asignado, dias_taller, id]
-    );
+   if (usarFechaDB) {
+  await client.query(
+    `UPDATE ordenes_trabajo SET
+      estado_ot = $1,
+      fecha_entrega = (NOW() AT TIME ZONE 'America/Santiago'),
+      tecnico_asignado = COALESCE($2, tecnico_asignado),
+      dias_taller = COALESCE($3, dias_taller)
+     WHERE id = $4`,
+    [estado, tecnico_asignado, dias_taller, id]
+  );
+} else {
+  await client.query(
+    `UPDATE ordenes_trabajo SET
+      estado_ot = $1,
+      fecha_entrega = $2,
+      tecnico_asignado = COALESCE($3, tecnico_asignado),
+      dias_taller = COALESCE($4, dias_taller)
+     WHERE id = $5`,
+    [estado, fechaEntregaFinal, tecnico_asignado, dias_taller, id]
+  );
+}
 
     const getRepuestos = () => {
       const r = ot.repuestos_usados;
