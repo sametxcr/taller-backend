@@ -1080,11 +1080,10 @@ app.patch('/api/ordenes_trabajo/:id/estado', async (req, res) => {
 
     // ✅ FIX ZONA HORARIA CHILE
     let fechaEntregaFinal = fecha_entrega;
-    if (estado === 'Entregado' &&!fecha_entrega) {
-      fechaEntregaFinal = new Date().toLocaleString('sv-SE', {
-        timeZone: 'America/Santiago'
-      }).replace(' ', 'T') + '.000-04:00';
-    }
+let usarFechaDB = false;
+if (estado === 'Entregado' &&!fecha_entrega) {
+  usarFechaDB = true;
+}
 
     await client.query(
       `UPDATE ordenes_trabajo SET
