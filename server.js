@@ -609,12 +609,12 @@ app.post('/api/retiros', async (req, res) => {
 	
     const retiroResult = await client.query(`
   INSERT INTO retiros_inventario 
-  (producto_id, sku, nombre_producto, cantidad, motivo, tipo_retiro, responsable, costo_unitario, precio_venta, bodega, ot_id)
-  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+  (producto_id, sku, nombre_producto, cantidad, motivo, tipo_retiro, responsable, costo_unitario, precio_venta, bodega, ot_id, creado)
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, (NOW() AT TIME ZONE 'America/Santiago'))
   RETURNING *
 `, [
   producto_id, sku, nombre_producto, parseInt(cantidad), motivo, 
-  tipo_retiro, responsable || 'Sistema', costoUnitarioEntero, precioVentaEntero, // ← AGREGAR ESTA LÍNEA
+  tipo_retiro, responsable || 'Sistema', costoUnitarioEntero, precioVentaEntero,
   bodega || 'local', ot_id? parseInt(ot_id) : null
 ]);
     
