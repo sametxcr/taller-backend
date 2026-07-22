@@ -458,13 +458,19 @@ app.get('/api/retiros', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         r.*,
-        ot.numero as ot_numero
+        ot.numero as ot_numero,
+        r.creado AT TIME ZONE 'America/Santiago' as creado_chile
       FROM retiros_inventario r
       LEFT JOIN ordenes_trabajo ot ON r.ot_id = ot.id
       ORDER BY r.creado DESC 
       LIMIT 100
     `);
-    res.json(result.rows);
+    // Manda la fecha ya convertida
+    const conFechaArreglada = result.rows.map(row => ({
+      ...row,
+      creado: row.creado_chile || row.creado
+    }));
+    res.json(conFechaArreglada);
   } catch (err) {
     console.error('ERROR /api/retiros:', err);
     res.status(500).json({ error: err.message });
