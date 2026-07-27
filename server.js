@@ -764,10 +764,10 @@ app.get('/api/clientes/rut/:rut/historial', async (req, res) => {
     const totalVisitas = ingresos.length;
     const totalOT = ots.length;
 
-    // FIX: Suma total || monto_final || valor_trabajo || monto_estimado
+       // FIX: prioriza monto_final (que tiene $433k) no "total" que viene en 0
     const totalGastado = otsConVehiculo.reduce((sum, ot) => {
-      const valor = Number(ot.total || ot.monto_final || ot.valor_trabajo || ot.monto_estimado || 0);
-      return sum + valor;
+      const valor = Number(ot.monto_final || ot.monto_estimado || ot.valor_trabajo || ot.total || 0);
+      return sum + (isNaN(valor) ? 0 : valor);
     }, 0);
 
     const creadoDate = ingresos[0].creado ? new Date(ingresos[0].creado) : null;
