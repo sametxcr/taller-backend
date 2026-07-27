@@ -712,16 +712,16 @@ app.delete('/api/clientes/:id', async (req, res) => {
 
 
 // ========== ENDPOINT PARA CLIENTE HISTORIAL MODAL ==========
+// ========== ENDPOINT PARA CLIENTE HISTORIAL MODAL - FIX TOTAL GASTADO ==========
 app.get('/api/clientes/rut/:rut/historial', async (req, res) => {
   try {
     const { rut } = req.params;
+    const rutLimpio = rut.replace(/[^0-9kK]/g, '').toUpperCase();
 
     const ingresosRes = await pool.query(
-      'SELECT * FROM clientes WHERE rut = $1 ORDER BY id DESC',
-      [rut]
+      `SELECT * FROM clientes WHERE REPLACE(REPLACE(rut, '.', ''), '-', '') ILIKE $1 ORDER BY id DESC`,
+      [`%${rutLimpio}%`]
     );
-
-    // ✅ NO FORMATEES, DEJA EL DATE COMO VIENE
     const ingresos = ingresosRes.rows;
 
     if (ingresos.length === 0) {
@@ -732,51 +732,60 @@ app.get('/api/clientes/rut/:rut/historial', async (req, res) => {
       });
     }
 
-    const otsRes = await pool.query(
-      'SELECT * FROM ordenes_trabajo WHERE rut_cliente = $1 ORDER BY id DESC',
-      [rut]
-    );
+    const patentes = [...new Set(ingresos.map(i => i.patente).filter(Boolean))];
 
-    // ✅ NO USES formatearOTParaFrontend AQUÍ, SOLO PARSEA
+    let otsRes;
+    if (patentes.length > 0) {
+      otsRes = await pool.query(
+        `SELECT * FROM ordenes_trabajo 
+         WHERE REPLACE(REPLACE(rut_cliente, '.', ''), '-', '') ILIKE $1
+         OR patente = ANY($2)
+         ORDER BY id DESC`,
+        [`%${rutLimpio}%`, patentes]
+      );
+    } else {
+      otsRes = await pool.query(
+        `SELECT * FROM ordenes_trabajo WHERE REPLACE(REPLACE(rut_cliente, '.', ''), '-', '') ILIKE $1 ORDER BY id DESC`,
+        [`%${rutLimpio}%`]
+      );
+    }
+
     const ots = otsRes.rows.map(formatearOTParaFrontend);
 
     const otsConVehiculo = ots.map(ot => {
-      const vehiculo = ingresos.find(i => i.patente === ot.patente);
+      const vehiculo = ingresos.find(i => i.patente?.toUpperCase() === ot.patente?.toUpperCase());
       return {
-...ot,
-        marca: (vehiculo?.marca || '').toUpperCase(),
-        modelo: (vehiculo?.modelo || '').toUpperCase()
+        ...ot,
+        marca: (vehiculo?.marca || ot.marca || '').toUpperCase(),
+        modelo: (vehiculo?.modelo || ot.modelo || '').toUpperCase()
       };
     });
 
     const totalVisitas = ingresos.length;
     const totalOT = ots.length;
 
-    const totalGastado = ots.reduce((sum, ot) => {
-      return sum + (ot.monto_final || ot.monto_estimado || 0);
+    // FIX: Suma total || monto_final || valor_trabajo || monto_estimado
+    const totalGastado = otsConVehiculo.reduce((sum, ot) => {
+      const valor = Number(ot.total || ot.monto_final || ot.valor_trabajo || ot.monto_estimado || 0);
+      return sum + valor;
     }, 0);
 
-    // ✅ MANDA ISO O NULL, NO FORMATEES
-    const creadoDate = ingresos[0].creado? new Date(ingresos[0].creado) : null;
-    const ultimaVisita = creadoDate &&!isNaN(creadoDate.getTime())? creadoDate.toISOString() : null;
+    const creadoDate = ingresos[0].creado ? new Date(ingresos[0].creado) : null;
+    const ultimaVisita = creadoDate && !isNaN(creadoDate.getTime()) ? creadoDate.toISOString() : null;
 
     const otsEntregadas = ots.filter(ot => ot.estado_ot === 'Entregado');
     const diasPromedio = otsEntregadas.length > 0
- ? Math.round(otsEntregadas.reduce((sum, ot) => {
-          const dias = calcularDiasTaller(ot);
-          return sum + dias;
-        }, 0) / otsEntregadas.length)
+      ? Math.round(otsEntregadas.reduce((sum, ot) => sum + calcularDiasTaller(ot), 0) / otsEntregadas.length)
       : 0;
 
     res.json({
-      ingresos, // ← SIN TOCAR
-      ots: otsConVehiculo, // ← SIN TOCAR FECHAS
+      ingresos,
+      ots: otsConVehiculo,
       stats: { totalVisitas, totalGastado, ultimaVisita, totalOT, diasPromedio }
     });
 
   } catch (err) { handleError(res, err); }
 });
-
 // ========== ORDENES_TRABAJO - RECALCULA SIEMPRE ==========
 app.get('/api/ordenes_trabajo', async (req, res) => {
   try {
