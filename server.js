@@ -669,12 +669,14 @@ app.post('/api/retiros', async (req, res) => {
       await client.query(`
         UPDATE ordenes_trabajo
         SET repuestos_usados = $1,
-            total_repuestos = (
+                        total_repuestos = (
               SELECT COALESCE(SUM(subtotal), 0)
               FROM ot_items
               WHERE ot_id = $2 AND tipo = 'repuesto'
             ),
-            total = COALESCE(total_repuestos, 0) + COALESCE(total_mano_obra, 0) + COALESCE(total_servicios, 0)
+            total = COALESCE(total_repuestos, 0) + COALESCE(total_mano_obra, 0) + COALESCE(total_servicios, 0),
+            monto_final = COALESCE(total_repuestos, 0) + COALESCE(total_mano_obra, 0) + COALESCE(total_servicios, 0),
+            monto_estimado = COALESCE(total_repuestos, 0) + COALESCE(total_mano_obra, 0) + COALESCE(total_servicios, 0)
         WHERE id = $2
       `, [JSON.stringify(repuestosActuales), parseInt(ot_id)]);
     }
@@ -764,9 +766,18 @@ app.get('/api/clientes/rut/:rut/historial', async (req, res) => {
     const totalVisitas = ingresos.length;
     const totalOT = ots.length;
 
-       // FIX: prioriza monto_final (que tiene $433k) no "total" que viene en 0
+       // FIX DEFINITIVO: prioriza monto_final y si está en 0 suma repuestos
     const totalGastado = otsConVehiculo.reduce((sum, ot) => {
-      const valor = Number(ot.monto_final || ot.monto_estimado || ot.valor_trabajo || ot.total || 0);
+      let valor = Number(ot.monto_final) || Number(ot.monto_estimado) || Number(ot.total) || Number(ot.valor_trabajo) || Number(ot.total_repuestos) || 0;
+      if (valor === 0 && ot.repuestos_usados) {
+        try {
+          const reps = typeof ot.repuestos_usados === 'string' ? JSON.parse(ot.repuestos_usados) : ot.repuestos_usados;
+          if (Array.isArray(reps)) {
+            valor = reps.reduce((s, r) => s + Number(r.subtotal || r.total || r.valor_total || (r.precio_venta || r.valor_unitario || 0) * (r.cantidad || 1) || 0), 0);
+            valor += Number(ot.total_mano_obra || 0) + Number(ot.total_servicios || 0);
+          }
+        } catch(e) {}
+      }
       return sum + (isNaN(valor) ? 0 : valor);
     }, 0);
 
